@@ -1,15 +1,9 @@
-/* 
-*
-* Wealth, fame, power.
-*
-*/
+// Wealth, Fame, Power.
 
 import NonFungibleToken from "./NonFungibleToken.cdc"
 import MetadataViews from "./MetadataViews.cdc"
 
 pub contract NFTDayTreasureChest: NonFungibleToken {
-
-    pub var totalSupply: UInt64
 
     pub event ContractInitialized()
     pub event Withdraw(id: UInt64, from: Address?)
@@ -17,31 +11,28 @@ pub contract NFTDayTreasureChest: NonFungibleToken {
 
     pub let CollectionStoragePath: StoragePath
     pub let CollectionPublicPath: PublicPath
-    pub let MinterStoragePath: StoragePath
+    pub let AdminStoragePath: StoragePath
 
+    pub var totalSupply: UInt64
+    pub var retired: Bool
+    access(self) var whitelist: [Address]
+    access(self) var minted: [Address]
+    access(self) var royalties: [MetadataViews.Royalty]
+    
     pub resource NFT: NonFungibleToken.INFT, MetadataViews.Resolver {
-        pub let id: UInt64
 
+        pub let id: UInt64
         pub let name: String
         pub let description: String
         pub let thumbnail: String
         access(self) let royalties: [MetadataViews.Royalty]
-        access(self) let metadata: {String: AnyStruct}
     
-        init(
-            id: UInt64,
-            name: String,
-            description: String,
-            thumbnail: String,
-            royalties: [MetadataViews.Royalty],
-            metadata: {String: AnyStruct},
-        ) {
-            self.id = id
-            self.name = name
-            self.description = description
-            self.thumbnail = thumbnail
-            self.royalties = royalties
-            self.metadata = metadata
+        init() {
+            self.id = NFTDayTreasureChest.totalSupply
+            self.name = "NFT Day Treasure Chest"
+            self.description = "This treasure chest has been inspected by an adventurous hunter."
+            self.thumbnail = "https://basicbeasts.mypinata.cloud/ipfs/QmUYVdSE1CLdcL8Z7FZdH7ye8tMdGnkbyVPpeQFW6tcYHy"
+            self.royalties = NFTDayTreasureChest.royalties
         }
     
         pub fun getViews(): [Type] {
@@ -52,8 +43,7 @@ pub contract NFTDayTreasureChest: NonFungibleToken {
                 Type<MetadataViews.ExternalURL>(),
                 Type<MetadataViews.NFTCollectionData>(),
                 Type<MetadataViews.NFTCollectionDisplay>(),
-                Type<MetadataViews.Serial>(),
-                Type<MetadataViews.Traits>()
+                Type<MetadataViews.Serial>()
             ]
         }
 
@@ -70,7 +60,7 @@ pub contract NFTDayTreasureChest: NonFungibleToken {
                 case Type<MetadataViews.Editions>():
                     // There is no max number of NFTs that can be minted from this contract
                     // so the max edition field value is set to nil
-                    let editionInfo = MetadataViews.Edition(name: "Example NFT Edition", number: self.id, max: nil)
+                    let editionInfo = MetadataViews.Edition(name: "NFT Day Treasure Chest Edition", number: self.id, max: nil)
                     let editionList: [MetadataViews.Edition] = [editionInfo]
                     return MetadataViews.Editions(
                         editionList
@@ -84,7 +74,7 @@ pub contract NFTDayTreasureChest: NonFungibleToken {
                         self.royalties
                     )
                 case Type<MetadataViews.ExternalURL>():
-                    return MetadataViews.ExternalURL("https://example-nft.onflow.org/".concat(self.id.toString()))
+                    return MetadataViews.ExternalURL("https://basicbeasts.io/".concat(self.id.toString()))
                 case Type<MetadataViews.NFTCollectionData>():
                     return MetadataViews.NFTCollectionData(
                         storagePath: NFTDayTreasureChest.CollectionStoragePath,
@@ -100,37 +90,21 @@ pub contract NFTDayTreasureChest: NonFungibleToken {
                 case Type<MetadataViews.NFTCollectionDisplay>():
                     let media = MetadataViews.Media(
                         file: MetadataViews.HTTPFile(
-                            url: "https://assets.website-files.com/5f6294c0c7a8cdd643b1c820/5f6294c0c7a8cda55cb1c936_Flow_Wordmark.svg"
+                            url: "https://basicbeasts.mypinata.cloud/ipfs/QmZLx5Tw7Fydm923kSkqcf5PuABtcwofuv6c2APc9iR41J"
                         ),
-                        mediaType: "image/svg+xml"
+                        mediaType: "image/png"
                     )
                     return MetadataViews.NFTCollectionDisplay(
-                        name: "The Example Collection",
-                        description: "This collection is used as an example to help you develop your next Flow NFT.",
-                        externalURL: MetadataViews.ExternalURL("https://example-nft.onflow.org"),
+                        name: "The NFT Day Treasure Chest Collection",
+                        description: "This collection is used for the Basic Beasts Treasure Hunt to celebrate international #NFTDay.",
+                        externalURL: MetadataViews.ExternalURL("https://basicbeasts.io"),
                         squareImage: media,
                         bannerImage: media,
                         socials: {
-                            "twitter": MetadataViews.ExternalURL("https://twitter.com/flow_blockchain")
+                            "twitter": MetadataViews.ExternalURL("https://twitter.com/basicbeastsnft")
                         }
                     )
-                case Type<MetadataViews.Traits>():
-                    // exclude mintedTime and foo to show other uses of Traits
-                    let excludedTraits = ["mintedTime", "foo"]
-                    let traitsView = MetadataViews.dictToTraits(dict: self.metadata, excludedNames: excludedTraits)
-
-                    // mintedTime is a unix timestamp, we should mark it with a displayType so platforms know how to show it.
-                    let mintedTimeTrait = MetadataViews.Trait(name: "mintedTime", value: self.metadata["mintedTime"]!, displayType: "Date", rarity: nil)
-                    traitsView.addTrait(mintedTimeTrait)
-
-                    // foo is a trait with its own rarity
-                    let fooTraitRarity = MetadataViews.Rarity(score: 10.0, max: 100.0, description: "Common")
-                    let fooTrait = MetadataViews.Trait(name: "foo", value: self.metadata["foo"], displayType: nil, rarity: fooTraitRarity)
-                    traitsView.addTrait(fooTrait)
-                    
-                    return traitsView
-
-            }
+                
             return nil
         }
     }
@@ -208,46 +182,77 @@ pub contract NFTDayTreasureChest: NonFungibleToken {
         return <- create Collection()
     }
 
-    pub fun mintNFT(
-            recipient: &{NonFungibleToken.CollectionPublic},
-            name: String,
-            description: String,
-            thumbnail: String,
-            royalties: [MetadataViews.Royalty]
-        ) {
-            let metadata: {String: AnyStruct} = {}
-            let currentBlock = getCurrentBlock()
-            metadata["mintedBlock"] = currentBlock.height
-            metadata["mintedTime"] = currentBlock.timestamp
-            metadata["minter"] = recipient.owner!.address
-
-            // this piece of metadata will be used to show embedding rarity into a trait
-            metadata["foo"] = "bar"
+    pub fun mintNFT(recipient: &{NonFungibleToken.CollectionPublic}) {
+            pre {
+                !self.retired : "Cannot mint Treasure Chest: NFT Day Treasure Chest is retired"
+                self.whitelist.contains(recipient.owner!.address) : "Cannot mint Treasure Chest: Address is not whitelisted"
+                !self.minted.contains(recipient.owner!.address) : "Cannot mint Treasure Chest: Address has already minted"
+            }
 
             // create a new NFT
-            var newNFT <- create NFT(
-                id: NFTDayTreasureChest.totalSupply,
-                name: name,
-                description: description,
-                thumbnail: thumbnail,
-                royalties: royalties,
-                metadata: metadata,
-            )
+            var newNFT <- create NFT()
 
             // deposit it in the recipient's account using their reference
             recipient.deposit(token: <-newNFT)
 
+            self.minted.append(recipient.owner!.address)
+
             NFTDayTreasureChest.totalSupply = NFTDayTreasureChest.totalSupply + UInt64(1)
     }
 
+    pub resource Admin {
+
+        pub fun whitelistAddress(address: Address) {
+            if !NFTDayTreasureChest.whitelist.contains(address) {
+                NFTDayTreasureChest.whitelist.append(address)
+            }
+        }
+
+        pub fun retire() {
+            if !NFTDayTreasureChest.retired {
+                NFTDayTreasureChest.retired = true
+            }
+        }
+
+        pub fun addRoyalty(beneficiary: Address, cut: UFix64, description: String) {
+
+            let beneficiaryCapability = getAccount(beneficiary)
+            .getCapability<&{FungibleToken.Receiver}>(MetadataViews.getRoyaltyReceiverPublicPath())
+
+            // Make sure the royalty capability is valid before minting the NFT
+            if !beneficiaryCapability.check() { panic("Beneficiary capability is not valid!") }
+
+            NFTDayTreasureChest.royalties.append(
+                MetadataViews.Royalty(
+                    receiver: beneficiaryCapability,
+                    cut: cut,
+                    description: description
+                )
+            )
+        }
+
+    }
+
+    pub fun getWhitelist() {
+        return self.whitelist
+    }
+
+    pub fun getMinted() {
+        return self.minted
+    }
+
     init() {
-        // Initialize the total supply
+        // Initialize contract fields
         self.totalSupply = 0
+        self.retired = false
+        self.whitelist = []
+        self.minted = []
+        self.royalties = []
 
         // Set the named paths
         self.CollectionStoragePath = /storage/bbNFTDayTreasureChestCollection
         self.CollectionPublicPath = /public/bbNFTDayTreasureChestCollection
-        self.MinterStoragePath = /storage/bbNFTDayTreasureChestMinter
+        self.AdminStoragePath = /storage/bbNFTDayTreasureChestAdmin
 
         // Create a Collection resource and save it to storage
         let collection <- create Collection()
@@ -259,9 +264,9 @@ pub contract NFTDayTreasureChest: NonFungibleToken {
             target: self.CollectionStoragePath
         )
 
-        // Create a Minter resource and save it to storage
-        let minter <- create NFTMinter()
-        self.account.save(<-minter, to: self.MinterStoragePath)
+        // Create a Admin resource and save it to storage
+        let admin <- create Admin()
+        self.account.save(<-admin, to: self.AdminStoragePath)
 
         emit ContractInitialized()
     }
