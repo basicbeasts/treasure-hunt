@@ -1,7 +1,8 @@
 // Wealth, Fame, Power.
-
+import FungibleToken from "./FungibleToken.cdc"
 import NonFungibleToken from "./NonFungibleToken.cdc"
 import MetadataViews from "./MetadataViews.cdc"
+import FlowToken from "./FlowToken.cdc"
 
 pub contract NFTDayTreasureChest: NonFungibleToken {
 
@@ -104,7 +105,7 @@ pub contract NFTDayTreasureChest: NonFungibleToken {
                             "twitter": MetadataViews.ExternalURL("https://twitter.com/basicbeastsnft")
                         }
                     )
-                
+            }
             return nil
         }
     }
@@ -214,10 +215,7 @@ pub contract NFTDayTreasureChest: NonFungibleToken {
             }
         }
 
-        pub fun addRoyalty(beneficiary: Address, cut: UFix64, description: String) {
-
-            let beneficiaryCapability = getAccount(beneficiary)
-            .getCapability<&{FungibleToken.Receiver}>(MetadataViews.getRoyaltyReceiverPublicPath())
+        pub fun addRoyalty(beneficiaryCapability: Capability<&AnyResource{FungibleToken.Receiver}>, cut: UFix64, description: String) {
 
             // Make sure the royalty capability is valid before minting the NFT
             if !beneficiaryCapability.check() { panic("Beneficiary capability is not valid!") }
@@ -233,11 +231,11 @@ pub contract NFTDayTreasureChest: NonFungibleToken {
 
     }
 
-    pub fun getWhitelist() {
+    pub fun getWhitelist(): [Address] {
         return self.whitelist
     }
 
-    pub fun getMinted() {
+    pub fun getMinted(): [Address] {
         return self.minted
     }
 
@@ -247,7 +245,11 @@ pub contract NFTDayTreasureChest: NonFungibleToken {
         self.retired = false
         self.whitelist = []
         self.minted = []
-        self.royalties = []
+        self.royalties = [MetadataViews.Royalty(
+							recepient: self.account.getCapability<&FlowToken.Vault{FungibleToken.Receiver}>(/public/flowTokenReceiver),
+							cut: 0.05, // 5% royalty on secondary sales
+							description: "Basic Beasts 5% royalty from secondary sales."
+						)]
 
         // Set the named paths
         self.CollectionStoragePath = /storage/bbNFTDayTreasureChestCollection
@@ -271,3 +273,4 @@ pub contract NFTDayTreasureChest: NonFungibleToken {
         emit ContractInitialized()
     }
 }
+ 

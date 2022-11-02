@@ -6,12 +6,21 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "format": "prettier . --write"
   },
   "dependencies": {
+    "@onflow/fcl": "^1.2.1",
+    "@onflow/types": "^1.0.3",
+    "@tanstack/react-table": "^8.5.13",
+    "@types/styled-components": "^5.1.26",
+    "elliptic": "^6.5.4",
     "next": "12.3.1",
     "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react-dom": "18.2.0",
+    "react-toastify": "^9.0.8",
+    "sha3": "^2.1.4",
+    "styled-components": "^5.3.5"
   },
   "devDependencies": {
     "@types/node": "18.7.18",
@@ -19,6 +28,7 @@
     "@types/react-dom": "18.0.6",
     "eslint": "8.23.1",
     "eslint-config-next": "12.3.1",
+    "prettier": "^2.7.1",
     "typescript": "4.8.3"
   }
 }
